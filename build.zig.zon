@@ -1,0 +1,21 @@
+.{
+    .name = "gltf-parser",
+    .version = "0.0.0",
+    .dependencies = .{
+        .stb = .{
+            .url = "https://github.com/nothings/stb/archive/f75e8d1cad7d90d72ef7a4661f1b994ef78b4e31.tar.gz",
+            .hash = "1220c4fe5a4c4ebec402f5cdef08bc264b56fb07f259107d2b01ba8d416d88624b50",
+        },
+        .tracy = .{
+            .url = "https://github.com/wolfpld/tracy/archive/075395620a504c0cdcaf9bab3d196db16a043de7.tar.gz",
+            .hash = "1220ec41abde94730af701ba9da16ba3f10bb7d0b62a0b7fdebe10b0aad515e302a6",
+        },
+    },
+    .paths = .{
+        "src/main.zig",
+        "build.zig",
+        "build.zig.zon",
+        "README.md",
+        "LICENSE",
+    },
+}
