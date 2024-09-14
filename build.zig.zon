@@ -13,6 +13,8 @@
     },
     .paths = .{
         "src/main.zig",
+        "src/stb_image.c",
+        "src/tracy.zig",
         "build.zig",
         "build.zig.zon",
         "README.md",
