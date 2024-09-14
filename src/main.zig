@@ -27,7 +27,12 @@ pub const Mesh = struct {
 };
 
 pub const Material = struct {
-    albedo: Texture,
+    pbr: ?PBR,
+
+    const PBR = struct {
+        base_color_factor: @Vector(4, f32),
+        base_color_texture: ?Texture,
+    };
 };
 
 pub const Texture = struct {
@@ -82,11 +87,12 @@ const JsonChunk = struct {
     },
     materials: []struct {
         name: ?[]const u8 = null,
-        pbrMetallicRoughness: struct {
-            baseColorTexture: struct {
+        pbrMetallicRoughness: ?struct {
+            baseColorFactor: @Vector(4, f32) = .{ 1, 1, 1, 1 },
+            baseColorTexture: ?struct {
                 index: u16,
-            },
-        },
+            } = null,
+        } = null,
     } = &.{},
     textures: []struct {
         sampler: u16,
@@ -267,37 +273,47 @@ pub fn parseGLB(allocator: std.mem.Allocator, data: []const u8) !GLTF {
     }
 
     for (metadata.materials, out_materials) |material, *out_material| {
-        const tex = metadata.textures[material.pbrMetallicRoughness.baseColorTexture.index];
-        const img = metadata.images[tex.source];
-        const buffer_view = metadata.bufferViews[img.bufferView];
-        assert(buffer_view.byteStride == null);
+        if (material.pbrMetallicRoughness) |pbr| {
+            var base_color_texture: ?Texture = null;
+            if (pbr.baseColorTexture) |base_tex| {
+                const tex = metadata.textures[base_tex.index];
+                const img = metadata.images[tex.source];
+                const buffer_view = metadata.bufferViews[img.bufferView];
+                assert(buffer_view.byteStride == null);
 
-        const ptr = buffer[buffer_view.byteOffset..][0..buffer_view.byteLength];
+                const ptr = buffer[buffer_view.byteOffset..][0..buffer_view.byteLength];
 
-        var width: c_int = 0;
-        var height: c_int = 0;
-        var channels_in_file: c_int = 0;
-        var image: [:0]u8 = undefined;
+                var width: c_int = 0;
+                var height: c_int = 0;
+                var channels_in_file: c_int = 0;
+                var image: [:0]u8 = undefined;
 
-        if (!@hasDecl(@import("root"), "BENCHMARK_GLTF")) {
-            const image_c = stbi.stbi_load_from_memory(
-                ptr.ptr,
-                @intCast(ptr.len),
-                &width,
-                &height,
-                &channels_in_file,
-                4,
-            );
-            image = @ptrCast(image_c[0..@intCast(width * height * 4 + 1)]);
+                if (!@hasDecl(@import("root"), "BENCHMARK_GLTF")) {
+                    const image_c = stbi.stbi_load_from_memory(
+                        ptr.ptr,
+                        @intCast(ptr.len),
+                        &width,
+                        &height,
+                        &channels_in_file,
+                        4,
+                    );
+                    image = @ptrCast(image_c[0..@intCast(width * height * 4 + 1)]);
+                }
+
+                base_color_texture = .{
+                    .width = @intCast(width),
+                    .height = @intCast(height),
+                    .data = image,
+                };
+            }
+
+            out_material.* = .{
+                .pbr = .{
+                    .base_color_factor = pbr.baseColorFactor,
+                    .base_color_texture = base_color_texture,
+                },
+            };
         }
-
-        out_material.* = .{
-            .albedo = .{
-                .width = @intCast(width),
-                .height = @intCast(height),
-                .data = image,
-            },
-        };
     }
 
     for (metadata.meshes, out_meshes) |mesh, *out_mesh| {
@@ -493,7 +509,9 @@ pub fn parseGLB(allocator: std.mem.Allocator, data: []const u8) !GLTF {
 pub fn deinit(gltf: GLTF, allocator: std.mem.Allocator) void {
     if (!@hasDecl(@import("root"), "BENCHMARK_GLTF")) {
         for (gltf.materials) |material| {
-            stbi.stbi_image_free(material.albedo.data.ptr);
+            if (material.pbr) |pbr| {
+                if (pbr.base_color_texture) |tex| stbi.stbi_image_free(tex.data.ptr);
+            }
         }
     }
     allocator.free(gltf.fba_buf);
