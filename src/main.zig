@@ -249,7 +249,7 @@ pub fn parseGLB(allocator: std.mem.Allocator, data: []const u8) !GLTF {
     alloc_zone.setColor(0x00FF00);
 
     // TODO: Precisely measure needed size
-    const fba_buf = try allocator.alloc(u8, buffer.len);
+    const fba_buf = try allocator.alloc(u8, buffer.len * 4);
     var fba_instance = std.heap.FixedBufferAllocator.init(fba_buf);
     const fba = fba_instance.allocator();
 
