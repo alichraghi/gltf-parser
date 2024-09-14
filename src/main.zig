@@ -241,7 +241,7 @@ pub fn parseGLB(allocator: std.mem.Allocator, data: []const u8) !GLTF {
     chunk_type = try reader.readInt(u32, .little);
     if (chunk_type != 0x004E4942) return error.CorruptFile;
 
-    const buffer = data[fbs.pos..metadata.buffers[0].byteLength];
+    const buffer = data[fbs.pos..][0..metadata.buffers[0].byteLength];
 
     // Parse accessors/images/etc
     const alloc_zone = tracy.trace(@src());
